@@ -1307,16 +1307,46 @@
           list_of_options.push($(this).attr('data-value'));
         });
 
+        const requestData = {
+          string: $('#string-to-analyze').val(),
+          group: false,
+          option: list_of_options.join(','),
+          uuid: random_string,
+        };
+        console.log('=== API 請求 ===');
+        console.log('URL: POST /analyze_string');
+        console.log('請求參數:', requestData);
+
         await $.ajax({
           type: 'POST',
           url: '/analyze_string',
-          data: {
-            string: $('#string-to-analyze').val(),
-            group: false,
-            option: list_of_options.join(','),
-            uuid: random_string,
-          },
+          data: requestData,
         }).done((data) => {
+          console.log('=== API 回應 ===');
+          console.log('完整回應:', data);
+          console.log('回應類型:', typeof data);
+          console.log('回應是否為 Error:', data === 'Error');
+
+          // 詳細顯示回應結構
+          if (data && typeof data === 'object') {
+            console.log('user_info_normal 資料數量:', data.user_info_normal?.data?.length || 0);
+            console.log('user_info_advanced 資料數量:', data.user_info_advanced?.data?.length || 0);
+            console.log('user_info_special 資料數量:', data.user_info_special?.data?.length || 0);
+            console.log('common words 數量:', data.common?.length || 0);
+            console.log('logs:', data.logs || '(無日誌)');
+
+            // 顯示找到的個人資料
+            if (data.user_info_normal?.data?.length > 0) {
+              console.log('📌 找到的個人資料 (normal):', data.user_info_normal.data);
+            }
+            if (data.user_info_advanced?.data?.length > 0) {
+              console.log('📌 找到的個人資料 (advanced):', data.user_info_advanced.data);
+            }
+            if (data.user_info_special?.data?.length > 0) {
+              console.log('📌 找到的個人資料 (special):', data.user_info_special.data);
+            }
+          }
+
           if (data !== 'Error') {
             let temp_tr = '';
             output_json = data;
@@ -1533,6 +1563,9 @@
           }
         });
       } catch (err) {
+        console.error('=== API 錯誤 ===');
+        console.error('錯誤訊息:', err);
+        console.error('完整錯誤:', err.responseText || err);
         verbose && console.log(err);
       }
 

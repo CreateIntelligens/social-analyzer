@@ -1,25 +1,55 @@
-version: "3" 
 services:
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8901}:8901"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./public:/usr/share/nginx/html:ro
+    depends_on:
+      - social-analyzer
+    networks:
+      - app-network
+
   social-analyzer:
     build: .
-    ports:
-      - "9005:9005"
+    restart: unless-stopped
+    expose:
+      - "9005"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - PORT=9005
+      - GOOGLE_SEARCH_API_KEY=${GOOGLE_SEARCH_API_KEY}
+      - GOOGLE_SEARCH_ENGINE_ID=${GOOGLE_SEARCH_ENGINE_ID}
+    env_file:
+      - .env
     depends_on:
       - hub
-    links:
-      - hub
-    entrypoint: npm start -- --docker --grid "http://hub:4444/wd/hub"
+    networks:
+      - app-network
+    entrypoint: npm start -- --gui --docker --grid "http://hub:4444/wd/hub"
+
   hub:
     image: selenium/hub
-    ports:
-      - "4444:4444"
+    restart: unless-stopped
+    expose:
+      - "4444"
     environment:
       GRID_MAX_SESSION: 16
-      GRID_BROWSER_TIMEOUT: 6000
-      GRID_TIMEOUT: 6000
+      GRID_BROWSER_TIMEOUT: 300
+      GRID_TIMEOUT: 300
+      SE_SESSION_REQUEST_TIMEOUT: 600
+      SE_NODE_SESSION_TIMEOUT: 600
+    networks:
+      - app-network
+
   firefox:
     image: selenium/node-firefox
     container_name: web-automation_firefox
+    restart: unless-stopped
     depends_on:
       - hub
     environment:
@@ -29,7 +59,21 @@ services:
       SE_NODE_MAX_SESSIONS: ${CPU_CORES:-2}
     volumes:
       - /dev/shm:/dev/shm
-    ports:
-      - "9002:5900"
-    links:
-      - hub
+    networks:
+      - app-network
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      SWAGGER_JSON: /openapi.yaml
+    volumes:
+      - ./openapi.yaml:/openapi.yaml:ro
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

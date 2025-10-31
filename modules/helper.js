@@ -1,7 +1,7 @@
 const verbose = false
 const global_lock = []
-const google_api_key = ''
-const google_api_cs = ''
+const google_api_key = process.env.GOOGLE_SEARCH_API_KEY || ''
+const google_api_cs = process.env.GOOGLE_SEARCH_ENGINE_ID || ''
 const grid_url = ''
 const proxy = ''
 let tecert_file = ''
